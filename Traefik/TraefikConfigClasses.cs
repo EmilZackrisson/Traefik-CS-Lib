@@ -1,61 +1,63 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace Traefik;
 
 using System.Text.Json.Serialization;
 
 public class DynamicConfig
 {
-    public Http Http = null!;
+    public Http Http;
 }
 
 public class Router
 {
-
     [JsonPropertyName("EntryPoints")]
-    public List<string> EntryPoints { get; set; } = null!;
+    public required List<string> EntryPoints { get; set; }
 
     [JsonPropertyName("Rule")]
-    public string Rule { get; set; } = null!;
+    public required string Rule { get; set; }
 
     [JsonPropertyName("Middlewares")]
 
-    public List<string>? Middlewares { get; set; } = null!;
+    public List<string>? Middlewares { get; set; }
 
+    [Required]
     [JsonPropertyName("Service")]
-    public string Service { get; set; } = null!;
+    public required string Service { get; set; }
 
     [JsonPropertyName("Tls")]
-    public Tls? Tls { get; set; } = null!;
+    public Tls? Tls { get; set; }
 }
 
 
 public class Http
 {
-    public Dictionary<string, Router> Routers { get; set; } = null!;
-    public Dictionary<string, Service> Services { get; set; } = null!;
+    public Dictionary<string, Router> Routers { get; set; }
+    public Dictionary<string, Service> Services { get; set; }
 
 }
 
 public class Services
 {
-    public Dictionary<string, Service> ServiceList { get; set; } = null!;
+    public Dictionary<string, Service> ServiceList { get; set; }
 }
 
 public class Service
 {
-    public LoadBalancer LoadBalancer { get; set; } = null!;
+    public LoadBalancer LoadBalancer { get; set; }
 }
 
 public class LoadBalancer
 {
     public bool PassHostHeader { get; set; }
-    public List<Server> Servers { get; set; } = null!;
+    public required List<Server> Servers { get; set; }
 }
 
 public class Server
 {
-    public string Url { get; set; } = null!;
+    public required string Url { get; set; }
 }
 public class Tls
 {
-    public string CertResolver { get; set; } = null!;
+    public string CertResolver { get; set; }
 }
