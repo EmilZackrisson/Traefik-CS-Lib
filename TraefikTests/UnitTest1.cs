@@ -148,6 +148,17 @@ public class Tests
         var deletedService = traefik.DeleteService("testServiceDelete");
         Assert.That(deletedService, Is.EqualTo(true));
     }
+
+    [Test]
+    public void TestGetEntryPoints()
+    {
+        var traefik = new Traefik.TraefikHelper(testYamlLocation);
+        var entryPoints = traefik.GetEntrypoints();
+        foreach (var entryPoint in entryPoints)
+        {
+            Assert.That(entryPoint, Is.Not.Null);
+        }
+    }
     
     /*
     [Test]
