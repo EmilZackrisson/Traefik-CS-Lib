@@ -481,4 +481,24 @@ public class TraefikHelper
         }
         return middlewares;
     }
+
+    /// <summary>
+    /// Returns a list of all used entrypoints keys in the config.
+    /// </summary>
+    /// <returns>A list of all used entrypoints keys in the config.</returns>
+    public List<string> GetEntrypoints()
+    {
+        var entrypoints = new List<string>();
+
+        foreach (var http in _config.http)
+        {
+            if (http.Key != "entryPoints") continue;
+
+            foreach (var entrypoint in _config.http.entryPoints)
+            { 
+                entrypoints.Add(entrypoint.Key);
+            }
+        }
+        return entrypoints;
+    }
 }
