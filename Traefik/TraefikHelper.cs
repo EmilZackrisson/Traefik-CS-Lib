@@ -489,16 +489,21 @@ public class TraefikHelper
     public List<string> GetEntrypoints()
     {
         var entrypoints = new List<string>();
-
-        foreach (var http in _config.http)
+        var routers = GetRouters();
+        
+        foreach (var routerName in routers)
         {
-            if (http.Key != "entryPoints") continue;
+            var router = GetRouter(routerName);
 
-            foreach (var entrypoint in _config.http.entryPoints)
-            { 
-                entrypoints.Add(entrypoint.Key);
+            foreach (var entryPoint in router.EntryPoints)
+            {
+                if (!entrypoints.Contains(entryPoint))
+                {
+                    entrypoints.Add(entryPoint);
+                }
             }
         }
+        
         return entrypoints;
     }
 }
