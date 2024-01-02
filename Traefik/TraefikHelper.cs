@@ -81,6 +81,7 @@ public class TraefikHelper
             throw new NotSupportedException($"Unsupported YamlNode type: {node.GetType()}");
         }
     }
+    
 
     /// <summary>
     /// Adds a router to the Traefik configuration.
@@ -187,7 +188,7 @@ public class TraefikHelper
         string yaml = serializer.Serialize(_config);
         return yaml;
     }
-
+    
     private Http? GetHttpObjectFromConfig()
     {
         try
