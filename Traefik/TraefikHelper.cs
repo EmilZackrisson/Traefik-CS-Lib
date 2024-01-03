@@ -174,6 +174,7 @@ public class TraefikHelper
             .ConfigureDefaultValuesHandling(DefaultValuesHandling.OmitNull)
             .WithIndentedSequences()
             .WithNamingConvention(CamelCaseNamingConvention.Instance)
+            .WithQuotingNecessaryStrings()
             .Build();
         string yaml = serializer.Serialize(_config);
         return yaml;
@@ -194,17 +195,14 @@ public class TraefikHelper
             {
                 if (prop.ToString().Contains("http"))
                 {
-                    string json = JsonSerializer.Serialize(prop.Value, new JsonSerializerOptions
+                    var jsonSerializerOptions = new JsonSerializerOptions
                     {
-                        PropertyNamingPolicy = null,
-                        PropertyNameCaseInsensitive = true
-                    });
-                    json = json.Replace("\"true\"", "true").Replace("\"false\"", "false");
-                    var options = new JsonSerializerOptions()
-                    {
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
                         PropertyNameCaseInsensitive = true
                     };
-                    var httpConfig = JsonSerializer.Deserialize<Http>(json, options);
+                    var json = JsonSerializer.Serialize(prop.Value, jsonSerializerOptions);
+                    json = json.Replace("\"true\"", "true").Replace("\"false\"", "false");
+                    var httpConfig = JsonSerializer.Deserialize<Http>(json, jsonSerializerOptions);
                     
                     if (httpConfig == null)
                     {

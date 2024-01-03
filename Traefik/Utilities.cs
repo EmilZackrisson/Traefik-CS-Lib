@@ -5,8 +5,9 @@ public abstract class Utilities
     public static bool BackupConfigFile(string filename)
     {
         var file = File.ReadAllText(filename);
-        File.WriteAllText(filename + ".bak", file);
+        var newFileName = filename + ".bak-" + DateTime.Now.ToString("yyyyMMddHHmmss");
+        File.WriteAllText(newFileName, file);
 
-        return File.Exists(filename + ".bak");
+        return File.Exists(newFileName);
     }
 }

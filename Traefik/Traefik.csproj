@@ -6,7 +6,7 @@
         <Nullable>enable</Nullable>
         <RootNamespace>Traefik</RootNamespace>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-        <Version>0.0.4.6</Version>
+        <Version>0.0.5</Version>
         
         <Authors>EmilZackrisson</Authors>
         <Description>A library for reading, adding and editing a YAML Traefik dynamic config.</Description>

@@ -34,6 +34,21 @@ public class Tests
         var traefik = new TraefikHelper(_testYamlLocation);
         Assert.That(traefik, Is.Not.Null);
     }
+    
+    [Test]
+    public void TestBackupConfigFile()
+    {
+        var traefik = new TraefikHelper(_testYamlLocation);
+        var newFileName = _testYamlLocation + ".bak-" + DateTime.Now.ToString("yyyyMMddHHmmss");
+        var fileExists = File.Exists(newFileName);
+        Assert.That(fileExists, Is.EqualTo(true));
+        
+        // Cleanup
+        File.Delete(newFileName);
+        
+        var fileExistsAfterDelete = File.Exists(newFileName);
+        Assert.That(fileExistsAfterDelete, Is.EqualTo(false));
+    }
 
     [Test]
     public void TestAddRouter()
