@@ -5,49 +5,51 @@ namespace TraefikTests;
 public class Tests
 {
     private string testYamlLocation = "/Users/emizac/RiderProjects/Traefik/TraefikTests/test.yaml";
-    /*[SetUp]
-    public void Setup()
+    
+    private readonly Router defaultRouter = new Router()
     {
-        var traefik = new Traefik.TraefikHelper(testYamlLocation);
-    }*/
+        EntryPoints = new List<string>()
+        {
+            "websecure"
+        },
+        Rule = "Host(`test.example.com`)",
+        Service = "testService"
+    };
+    
+    private readonly Service defaultService = new Service()
+    {
+        LoadBalancer = new LoadBalancer()
+        {
+            PassHostHeader = true,
+            Servers = new List<Server>()
+            {
+                new Server()
+                {
+                    Url = "http://test.example.com"
+                }
+            }
+        }
+    };
 
     [Test]
     public void TestAddRouter()
     {
         var traefik = new Traefik.TraefikHelper(testYamlLocation);
-        var router = new Router()
-        {
-            EntryPoints = new List<string>()
-            {
-                "websecure"
-            },
-            Rule = "Host(`test.example.com`)",
-            Service = "testService"
-        };
-        var addedRouter = traefik.AddRouter("test", router);
+        var randomName = Guid.NewGuid().ToString();
+        var addedRouter = traefik.AddRouter(randomName, defaultRouter);
         Assert.That(addedRouter, Is.EqualTo(true));
-        
+
+        var router1 = traefik.GetRouter(randomName);
+        Assert.That(router1, Is.Not.Null);
+
     }
     
     [Test]
     public void TestAddService()
     {
         var traefik = new Traefik.TraefikHelper(testYamlLocation);
-        var service = new Service()
-        {
-            LoadBalancer = new LoadBalancer()
-            {
-                PassHostHeader = true,
-                Servers = new List<Server>()
-                {
-                    new Server()
-                    {
-                        Url = "http://test.example.com"
-                    }
-                }
-            }
-        };
-        var addedService = traefik.AddService("testService", service);
+        
+        var addedService = traefik.AddService("testService", defaultService);
         Assert.That(addedService, Is.EqualTo(true));
     }
 
@@ -56,34 +58,11 @@ public class Tests
     {
         var traefik = new Traefik.TraefikHelper(testYamlLocation);
         
-        var router = new Router()
-        {
-            EntryPoints = new List<string>()
-            {
-                "websecure"
-            },
-            Rule = "Host(`test.example.com`)",
-            Service = "testService"
-        };
-        var addedRouter = traefik.AddRouter("test", router);
+        var addedRouter = traefik.AddRouter("test", defaultRouter);
         Assert.That(addedRouter, Is.EqualTo(true));
         
-        var service = new Service()
-        {
-            LoadBalancer = new LoadBalancer()
-            {
-                PassHostHeader = true,
-                Servers = new List<Server>()
-                {
-                    new Server()
-                    {
-                        Url = "http://test.example.com"
-                    }
-                }
-            }
-        };
         
-        var addedService = traefik.AddService("testService", service);
+        var addedService = traefik.AddService("testService", defaultService);
         Assert.That(addedService, Is.EqualTo(true));
         
         var saved = traefik.SaveToFile("/Users/emizac/RiderProjects/Traefik/TraefikTests/testOut.yaml");
@@ -107,16 +86,7 @@ public class Tests
     public void TestDeleteRouter()
     {
         var traefik = new Traefik.TraefikHelper(testYamlLocation);
-        var router = new Router()
-        {
-            EntryPoints = new List<string>()
-            {
-                "websecure"
-            },
-            Rule = "Host(`test.example.com`)",
-            Service = "testService"
-        };
-        var addedRouter = traefik.AddRouter("test", router);
+        var addedRouter = traefik.AddRouter("test", defaultRouter);
         Assert.That(addedRouter, Is.EqualTo(true));
         
         var deletedRouter = traefik.DeleteRouter("test");
@@ -127,22 +97,8 @@ public class Tests
     public void TestDeleteService()
     {
         var traefik = new Traefik.TraefikHelper(testYamlLocation);
-        var service = new Service()
-        {
-            LoadBalancer = new LoadBalancer()
-            {
-                PassHostHeader = true,
-                Servers = new List<Server>()
-                {
-                    new Server()
-                    {
-                        Url = "http://test.example.com"
-                    }
-                }
-            }
-        };
         
-        var addedService = traefik.AddService("testServiceDelete", service);
+        var addedService = traefik.AddService("testServiceDelete", defaultService);
         Assert.That(addedService, Is.EqualTo(true));
         
         var deletedService = traefik.DeleteService("testServiceDelete");
@@ -159,43 +115,33 @@ public class Tests
             Assert.That(entryPoint, Is.Not.Null);
         }
     }
-    
-    /*
+
     [Test]
-    public void TestValidation()
+    public void TestUpdateRouter()
     {
         var traefik = new Traefik.TraefikHelper(testYamlLocation);
-        var router = new Router()
+        var addedRouter = traefik.AddRouter("test", defaultRouter);
+        Assert.That(addedRouter, Is.EqualTo(true));
+        
+        var updatedRouter = traefik.UpdateRouter("test", new Router()
         {
             EntryPoints = new List<string>()
             {
                 "websecure"
             },
             Rule = "Host(`test.example.com`)",
-            Service = "testService"
-        };
-        var addedRouter = traefik.AddRouter("test", router);
-        Assert.That(addedRouter, Is.EqualTo(true));
-        
-        var service = new Service()
-        {
-            LoadBalancer = new LoadBalancer()
+            Service = "testService",
+            Tls = new Tls()
             {
-                PassHostHeader = true,
-                Servers = new List<Server>()
-                {
-                    new Server()
-                    {
-                        Url = "http://test.example.com"
-                    }
-                }
+                CertResolver = "test"
             }
-        };
+        });
+        Assert.That(updatedRouter, Is.EqualTo(true));
         
-        var addedService = traefik.AddService("testService", service);
+        var addedService = traefik.AddService("testService", defaultService);
         Assert.That(addedService, Is.EqualTo(true));
-        
+
         var valid = traefik.Validate();
         Assert.That(valid, Is.EqualTo(true));
-    }*/
+    }
 }

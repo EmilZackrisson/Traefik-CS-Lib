@@ -20,8 +20,7 @@ public class Router
     [JsonPropertyName("Middlewares")]
 
     public List<string>? Middlewares { get; set; }
-
-    [Required]
+    
     [JsonPropertyName("Service")]
     public required string Service { get; set; }
 

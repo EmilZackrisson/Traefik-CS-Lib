@@ -99,7 +99,8 @@ public class TraefikHelper
                 throw new CouldNotAddException("Could not add router" + routerName);
             }
             
-            _config.http = httpConfig;
+            _config.http.routers = httpConfig.Routers;
+            
 
             _logger.Info("Service added");
             return true;
@@ -127,8 +128,8 @@ public class TraefikHelper
                 throw new CouldNotAddException("Could not add service");
             }
             
-            _config.http = httpConfig;
-
+            _config.http.services = httpConfig.Services;
+            
             _logger.Info("Service added");
             return true;
         }
@@ -165,7 +166,6 @@ public class TraefikHelper
             
             _logger.Info("Config saved to file");
             return true;
-
         }
         catch (Exception e)
         {
@@ -301,7 +301,8 @@ public class TraefikHelper
                 throw new RouterNotFoundException();
             }
             
-            _config.http = httpConfig;
+            _config.http.routers = httpConfig.Routers;
+            
             _logger.Info(routerName + " router deleted");
 
             return true;
@@ -329,7 +330,8 @@ public class TraefikHelper
                 throw new ServiceNotFoundException();
             }
             
-            _config.http = httpConfig;
+            _config.http.services = httpConfig.Services;
+            
             _logger.Info(serviceName + " service deleted");
 
             return true;
@@ -417,7 +419,8 @@ public class TraefikHelper
                 throw new CouldNotAddException("Could not add router");
             }
             
-            _config.http = httpConfig;
+            _config.http.routers = httpConfig.Routers;
+            
             _logger.Info("Router updated. (" + routerName + ")");
             
             return true;
@@ -453,6 +456,8 @@ public class TraefikHelper
             {
                 throw new CouldNotAddException("Could not add service");
             }
+            
+            _config.http.services = httpConfig.Services;
 
             return true;
         }

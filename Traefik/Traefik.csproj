@@ -6,16 +6,21 @@
         <Nullable>enable</Nullable>
         <RootNamespace>Traefik</RootNamespace>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-        <Version>0.0.4.2</Version>
+        <Version>0.0.4.6</Version>
+        
         <Authors>EmilZackrisson</Authors>
         <Description>A library for reading, adding and editing a YAML Traefik dynamic config.</Description>
         <Copyright>Emil Zackrisson</Copyright>
         <PackageReleaseNotes>Add Error when config file not exists.</PackageReleaseNotes>
+        <RepositoryUrl>https://github.com/EmilZackrisson/Traefik-CS-Lib</RepositoryUrl>
     </PropertyGroup>
 
     <ItemGroup>
       <PackageReference Include="NLog" Version="5.2.7" />
       <PackageReference Include="YamlDotNet" Version="13.7.1" />
     </ItemGroup>
+<!--    <Target Name="NugetPackAutoVersioning" AfterTargets="Build">-->
+<!--        <Exec Command="dotnet pack -p:PackageVersion=$([System.DateTime]::Now.ToString(&quot;yyyy.MM.dd.HHmm&quot;)) &#45;&#45;no-build &#45;&#45;configuration $(Configuration) &#45;&#45;output &quot;$(SolutionDir)nuget&quot;" />-->
+<!--    </Target>-->
 
 </Project>
