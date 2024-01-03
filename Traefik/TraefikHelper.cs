@@ -5,6 +5,7 @@ using System.Text.Json;
 using YamlDotNet.RepresentationModel;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
+using Traefik.Contracts;
 
 public class TraefikHelper
 {
@@ -88,7 +89,7 @@ public class TraefikHelper
     /// <param name="routerName"></param>
     /// <param name="router"></param>
     /// <returns>True if success, oterwise false</returns>
-    public bool AddRouter(string routerName, Router router)
+    public bool AddRouter(string routerName, Traefik.Contracts.HttpConfiguration.Router router)
     {
         try
         {
@@ -116,7 +117,7 @@ public class TraefikHelper
     /// <param name="serviceName"></param>
     /// <param name="service"></param>
     /// <returns>True if success, oterwise false</returns>
-    public bool AddService(string serviceName, Service service)
+    public bool AddService(string serviceName, Traefik.Contracts.HttpConfiguration.LoadBalancerHttpService service)
     {
         try
         {
@@ -188,7 +189,7 @@ public class TraefikHelper
         return yaml;
     }
 
-    private Http? GetHttpObjectFromConfig()
+    private Traefik.Contracts.HttpConfiguration.Http? GetHttpObjectFromConfig()
     {
         try
         {
@@ -212,7 +213,7 @@ public class TraefikHelper
                     {
                         PropertyNameCaseInsensitive = true
                     };
-                    var httpConfig = JsonSerializer.Deserialize<Http>(json, options);
+                    var httpConfig = JsonSerializer.Deserialize<Traefik.Contracts.HttpConfiguration.Http>(json, options);
                     return httpConfig;
                 }
             }
@@ -345,7 +346,7 @@ public class TraefikHelper
     /// </summary>
     /// <param name="routerName"></param>
     /// <returns></returns>
-    public Router? GetRouter(string routerName)
+    public Traefik.Contracts.HttpConfiguration.Router? GetRouter(string routerName)
     {
         try
         {
@@ -371,7 +372,7 @@ public class TraefikHelper
     /// </summary>
     /// <param name="serviceName"></param>
     /// <returns></returns>
-    public Service? GetService(string serviceName)
+    public Traefik.Contracts.HttpConfiguration.BaseHttpService? GetService(string serviceName)
     {
         try
         {
@@ -398,7 +399,7 @@ public class TraefikHelper
     /// <param name="routerName"></param>
     /// <param name="router"></param>
     /// <returns>True if updated, false if the router don't exists or an error occurs</returns>
-    public bool UpdateRouter(string routerName, Router router)
+    public bool UpdateRouter(string routerName, Traefik.Contracts.HttpConfiguration.Router router)
     {
         try
         {
@@ -434,7 +435,7 @@ public class TraefikHelper
     /// <param name="serviceName"></param>
     /// <param name="service"></param>
     /// <returns>True if updated, false if the service don't exists or an error occurs</returns>
-    public bool UpdateService(string serviceName, Service service)
+    public bool UpdateService(string serviceName, Traefik.Contracts.HttpConfiguration.LoadBalancerHttpService service)
     {
         try
         {

@@ -11,10 +11,14 @@
         <Description>A library for reading, adding and editing a YAML Traefik dynamic config.</Description>
         <Copyright>Emil Zackrisson</Copyright>
         <PackageReleaseNotes>Add Error when config file not exists.</PackageReleaseNotes>
+        <PackageProjectUrl>https://github.com/EmilZackrisson/Traefik-CS-Lib</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/EmilZackrisson/Traefik-CS-Lib</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
     </PropertyGroup>
 
     <ItemGroup>
       <PackageReference Include="NLog" Version="5.2.7" />
+      <PackageReference Include="Traefik.Contracts" Version="0.9.3" />
       <PackageReference Include="YamlDotNet" Version="13.7.1" />
     </ItemGroup>
 
