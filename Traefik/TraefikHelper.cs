@@ -35,9 +35,14 @@ public class TraefikHelper
 
             if (!File.Exists(fileName))
             {
-                _logger.Error("Traefik config file not found. (" + fileName + ")");
-                throw new FileNotFoundException();
+                throw new FileNotFoundException("Could not find config file");
             }
+
+            if (!Utilities.BackupConfigFile(fileName))
+            {
+                throw new FileNotFoundException("Could not save backup of config file");
+            }
+            
             _yamlStream.Load(new StreamReader(this._fileName));
 
             // Convert the YAML document to an ExpandoObject
@@ -52,33 +57,25 @@ public class TraefikHelper
 
     private static dynamic ConvertToExpando(YamlNode node)
     {
-        if (node is YamlScalarNode scalar)
+        switch (node)
         {
-            return scalar.Value;
-        }
-        else if (node is YamlSequenceNode sequence)
-        {
-            var list = new List<dynamic>();
-            foreach (var item in sequence)
+            case YamlScalarNode scalar:
+                return scalar.Value;
+            case YamlSequenceNode sequence:
+                return sequence.Select(item => ConvertToExpando(item)).ToList();
+            case YamlMappingNode mapping:
             {
-                list.Add(ConvertToExpando(item));
+                var expando = new ExpandoObject();
+                var dictionary = (IDictionary<string, object>)expando!;
+                foreach (var entry in mapping)
+                {
+                    var key = ((YamlScalarNode)entry.Key).Value;
+                    dictionary[key!] = ConvertToExpando(entry.Value);
+                }
+                return expando;
             }
-            return list;
-        }
-        else if (node is YamlMappingNode mapping)
-        {
-            var expando = new ExpandoObject();
-            var dictionary = (IDictionary<string, object>)expando;
-            foreach (var entry in mapping)
-            {
-                var key = ((YamlScalarNode)entry.Key).Value;
-                dictionary[key] = ConvertToExpando(entry.Value);
-            }
-            return expando;
-        }
-        else
-        {
-            throw new NotSupportedException($"Unsupported YamlNode type: {node.GetType()}");
+            default:
+                throw new NotSupportedException($"Unsupported YamlNode type: {node.GetType()}");
         }
     }
     
@@ -88,7 +85,7 @@ public class TraefikHelper
     /// </summary>
     /// <param name="routerName"></param>
     /// <param name="router"></param>
-    /// <returns>True if success, oterwise false</returns>
+    /// <returns>True if success, otherwise false</returns>
     public bool AddRouter(string routerName, Router router)
     {
         try
@@ -113,11 +110,11 @@ public class TraefikHelper
     }
 
     /// <summary>
-    /// Adds a service to the Traefik configuraton.
+    /// Adds a service to the Traefik configuration.
     /// </summary>
     /// <param name="serviceName"></param>
     /// <param name="service"></param>
-    /// <returns>True if success, oterwise false</returns>
+    /// <returns>True if success, otherwise false</returns>
     public bool AddService(string serviceName, Service service)
     {
         try
@@ -145,7 +142,7 @@ public class TraefikHelper
     /// </summary>
     /// <param name="fileName"></param>
     /// <exception cref="ConfigurationInvalidException"></exception>
-    /// <returns>True if success, oterwise false</returns>
+    /// <returns>True if success, otherwise false</returns>
     public bool SaveToFile(string? fileName)
     {
         try
@@ -155,15 +152,8 @@ public class TraefikHelper
                 throw new ConfigurationInvalidException();
             }
             
-            if (fileName == null)
-            {
-                File.WriteAllText(this._fileName, ConfigToYamlString());
-            }
-            else
-            {
-                File.WriteAllText(fileName, ConfigToYamlString());
-            }
-            
+            File.WriteAllText(fileName ?? this._fileName, ConfigToYamlString());
+
             _logger.Info("Config saved to file");
             return true;
         }
@@ -189,11 +179,12 @@ public class TraefikHelper
         return yaml;
     }
     
-    private Http? GetHttpObjectFromConfig()
+    private Http GetHttpObjectFromConfig()
     {
         try
         {
             var tempConfig = new ExpandoObject() as IDictionary<string, object>;
+            
             foreach (var kvp in _config as IDictionary<string, object>)
             {
                 tempConfig.Add(kvp);
@@ -214,16 +205,20 @@ public class TraefikHelper
                         PropertyNameCaseInsensitive = true
                     };
                     var httpConfig = JsonSerializer.Deserialize<Http>(json, options);
+                    
+                    if (httpConfig == null)
+                    {
+                        throw new ConfigurationInvalidException();
+                    }
                     return httpConfig;
                 }
             }
-
-            return null; // Add this line to handle the case when the loop doesn't execute
+            throw new ConfigurationInvalidException();
         }
         catch (Exception e)
         {
             _logger.Error(e, "Error getting http object from config");
-            return null;
+            throw;
         }
     }
     
