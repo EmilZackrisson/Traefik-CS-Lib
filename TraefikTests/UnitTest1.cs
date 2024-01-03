@@ -32,6 +32,13 @@ public class Tests
             }
         }
     };
+    
+    [Test]
+    public void TestCreateTraefikHelper()
+    {
+        var traefik = new Traefik.TraefikHelper(testYamlLocation);
+        Assert.That(traefik, Is.Not.Null);
+    }
 
     [Test]
     public void TestAddRouter()

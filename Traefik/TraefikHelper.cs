@@ -1,4 +1,6 @@
-﻿namespace Traefik;
+﻿using System.Text.Json.Serialization;
+
+namespace Traefik;
 
 using System.Dynamic;
 using System.Text.Json;
@@ -10,9 +12,12 @@ using Traefik.Contracts;
 public class TraefikHelper
 {
     private readonly YamlStream _yamlStream = new YamlStream();
-    private readonly dynamic _config = null!;
+    private dynamic _config = null!;
     private readonly string _fileName = null!;
     private readonly NLog.Logger _logger = null!;
+    private Traefik.Contracts.HttpConfiguration.Http _http = null!;
+    
+    private DynamicConfiguration _dynamicConfiguration = null!;
 
     /// <summary>
     /// Creates and initiates the YamlHelper object.
@@ -34,21 +39,40 @@ public class TraefikHelper
             
             this._fileName = fileName;
 
-            if (!File.Exists(fileName))
-            {
-                _logger.Error("Traefik config file not found. (" + fileName + ")");
-                throw new FileNotFoundException();
-            }
-            _yamlStream.Load(new StreamReader(this._fileName));
+            GetHttpObjectFromConfig();
 
-            // Convert the YAML document to an ExpandoObject
-            var root = (YamlMappingNode)_yamlStream.Documents[0].RootNode;
-            _config = ConvertToExpando(root);
+
         }
         catch (Exception e)
         {
             _logger.Error(e, "Error creating TraefikHelper");
         }
+    }
+
+    private void ReadFileToYamlObject()
+    {
+        if (!File.Exists(_fileName))
+        {
+            _logger.Error("Traefik config file not found. (" + _fileName + ")");
+            throw new FileNotFoundException();
+        }
+        _yamlStream.Load(new StreamReader(this._fileName));
+        
+        // Convert the YAML document to an ExpandoObject
+        var root = (YamlMappingNode)_yamlStream.Documents[0].RootNode;
+        _config = ConvertToExpando(root);
+        Console.WriteLine(_config);
+    }
+
+    private static string ConvertObjectToJson(object yaml)
+    {
+        SerializerBuilder builder = new SerializerBuilder();
+        builder.WithNamingConvention(CamelCaseNamingConvention.Instance);
+        builder.ConfigureDefaultValuesHandling(DefaultValuesHandling.OmitNull);
+        builder.WithIndentedSequences();
+        var serializer = builder.Build();
+        string json = serializer.Serialize(yaml);
+        return json;
     }
 
     private static dynamic ConvertToExpando(YamlNode node)
@@ -193,38 +217,53 @@ public class TraefikHelper
     {
         try
         {
-            var tempConfig = new ExpandoObject() as IDictionary<string, object>;
-            foreach (var kvp in _config as IDictionary<string, object>)
-            {
-                tempConfig.Add(kvp);
-            }
+            YamlMappingNode root = _config;
 
-            foreach (var prop in tempConfig)
-            {
-                if (prop.ToString().Contains("http"))
-                {
-                    string json = JsonSerializer.Serialize(prop.Value, new JsonSerializerOptions
-                    {
-                        PropertyNamingPolicy = null,
-                        PropertyNameCaseInsensitive = true
-                    });
-                    json = json.Replace("\"true\"", "true").Replace("\"false\"", "false");
-                    var options = new JsonSerializerOptions()
-                    {
-                        PropertyNameCaseInsensitive = true
-                    };
-                    var httpConfig = JsonSerializer.Deserialize<Traefik.Contracts.HttpConfiguration.Http>(json, options);
-                    return httpConfig;
-                }
-            }
-
-            return null; // Add this line to handle the case when the loop doesn't execute
+            Console.WriteLine(root);
+            // root["http"].ToString();
+            return null;
         }
         catch (Exception e)
         {
-            _logger.Error(e, "Error getting http object from config");
+            Console.WriteLine(e);
             return null;
+
+            throw;
         }
+        // try
+        // {
+        //     var tempConfig = new ExpandoObject() as IDictionary<string, object>;
+        //     foreach (var kvp in _config as IDictionary<string, object>)
+        //     {
+        //         tempConfig.Add(kvp);
+        //     }
+        //
+        //     foreach (var prop in tempConfig)
+        //     {
+        //         if (prop.ToString().Contains("http"))
+        //         {
+        //             string json = JsonSerializer.Serialize(prop.Value, new JsonSerializerOptions
+        //             {
+        //                 PropertyNamingPolicy = null,
+        //                 PropertyNameCaseInsensitive = true
+        //             });
+        //             json = json.Replace("\"true\"", "true").Replace("\"false\"", "false");
+        //             var options = new JsonSerializerOptions()
+        //             {
+        //                 PropertyNameCaseInsensitive = true
+        //             };
+        //             var httpConfig = JsonSerializer.Deserialize<Traefik.Contracts.HttpConfiguration.Http>(json, options);
+        //             return httpConfig;
+        //         }
+        //     }
+        //
+        //     return null; // Add this line to handle the case when the loop doesn't execute
+        // }
+        // catch (Exception e)
+        // {
+        //     _logger.Error(e, "Error getting http object from config");
+        //     return null;
+        // }
     }
     
     /// <summary>
