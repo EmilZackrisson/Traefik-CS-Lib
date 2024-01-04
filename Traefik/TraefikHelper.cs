@@ -376,14 +376,14 @@ public class TraefikHelper
         
             if (!success)
             {
-                throw new RouterNotFoundException();
+                throw new ServiceNotFoundException();
             }
         
             return service;
         }
         catch (Exception e)
         {
-            _logger.Error(e, "Error getting router (" + serviceName + ")");
+            _logger.Error(e, "Error getting service (" + serviceName + ")");
             return null;
         }
     }
