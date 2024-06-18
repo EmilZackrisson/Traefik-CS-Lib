@@ -1,17 +1,17 @@
-﻿namespace Traefik;
-
-using System.Dynamic;
+﻿using System.Dynamic;
 using System.Text.Json;
 using YamlDotNet.RepresentationModel;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
+namespace Traefik;
+
 public class TraefikHelper
 {
-    private readonly YamlStream _yamlStream = new YamlStream();
     private readonly dynamic _config = null!;
     private readonly string _fileName = null!;
     private readonly NLog.Logger _logger = null!;
+    private readonly YamlStream _yamlStream = new YamlStream();
 
     /// <summary>
     /// Creates and initiates the YamlHelper object.
@@ -25,12 +25,12 @@ public class TraefikHelper
             var loggingConfiguration = new NLog.Config.LoggingConfiguration();
             // create a console logging target
             var logConsole = new NLog.Targets.ConsoleTarget();
-            loggingConfiguration.AddRule(NLog.LogLevel.Info, NLog.LogLevel.Fatal, logConsole);
+            loggingConfiguration.AddRule(NLog.LogLevel.Debug, NLog.LogLevel.Fatal, logConsole);
             NLog.LogManager.Configuration = loggingConfiguration;
 
             // create a logger
             _logger = NLog.LogManager.GetCurrentClassLogger();
-            
+
             this._fileName = fileName;
 
             if (!File.Exists(fileName))
@@ -42,7 +42,7 @@ public class TraefikHelper
             {
                 throw new FileNotFoundException("Could not save backup of config file");
             }
-            
+
             _yamlStream.Load(new StreamReader(this._fileName));
 
             // Convert the YAML document to an ExpandoObject
@@ -72,13 +72,14 @@ public class TraefikHelper
                     var key = ((YamlScalarNode)entry.Key).Value;
                     dictionary[key!] = ConvertToExpando(entry.Value);
                 }
+
                 return expando;
             }
             default:
                 throw new NotSupportedException($"Unsupported YamlNode type: {node.GetType()}");
         }
     }
-    
+
 
     /// <summary>
     /// Adds a router to the Traefik configuration.
@@ -95,11 +96,13 @@ public class TraefikHelper
             {
                 throw new CouldNotAddException("Could not add router" + routerName);
             }
-            
-            _config.http.routers = httpConfig.Routers;
-            
 
-            _logger.Info("Service added");
+            _logger.Debug(router.ToString());
+
+            _config.http.routers = httpConfig.Routers;
+
+
+            _logger.Info("Router added");
             return true;
         }
         catch (Exception e)
@@ -124,9 +127,11 @@ public class TraefikHelper
             {
                 throw new CouldNotAddException("Could not add service");
             }
-            
+
+            _logger.Debug(service.ToString());
+
             _config.http.services = httpConfig.Services;
-            
+
             _logger.Info("Service added");
             return true;
         }
@@ -147,11 +152,11 @@ public class TraefikHelper
     {
         try
         {
-            if (!Validate())
+            if (!this.Validate())
             {
-                throw new ConfigurationInvalidException();
+                throw new ConfigurationInvalidException("Config is not valid. Cannot save to file.");
             }
-            
+
             File.WriteAllText(fileName ?? this._fileName, ConfigToYamlString());
 
             _logger.Info("Config saved to file");
@@ -179,13 +184,13 @@ public class TraefikHelper
         string yaml = serializer.Serialize(_config);
         return yaml;
     }
-    
+
     private Http GetHttpObjectFromConfig()
     {
         try
         {
             var tempConfig = new ExpandoObject() as IDictionary<string, object>;
-            
+
             foreach (var kvp in _config as IDictionary<string, object>)
             {
                 tempConfig.Add(kvp);
@@ -193,24 +198,24 @@ public class TraefikHelper
 
             foreach (var prop in tempConfig)
             {
-                if (prop.ToString().Contains("http"))
+                if (!prop.ToString().Contains("http")) continue;
+                var jsonSerializerOptions = new JsonSerializerOptions
                 {
-                    var jsonSerializerOptions = new JsonSerializerOptions
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        PropertyNameCaseInsensitive = true
-                    };
-                    var json = JsonSerializer.Serialize(prop.Value, jsonSerializerOptions);
-                    json = json.Replace("\"true\"", "true").Replace("\"false\"", "false");
-                    var httpConfig = JsonSerializer.Deserialize<Http>(json, jsonSerializerOptions);
-                    
-                    if (httpConfig == null)
-                    {
-                        throw new ConfigurationInvalidException();
-                    }
-                    return httpConfig;
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    PropertyNameCaseInsensitive = true
+                };
+                var json = JsonSerializer.Serialize(prop.Value, jsonSerializerOptions);
+                json = json.Replace("\"true\"", "true").Replace("\"false\"", "false");
+                var httpConfig = JsonSerializer.Deserialize<Http>(json, jsonSerializerOptions);
+
+                if (httpConfig == null)
+                {
+                    throw new ConfigurationInvalidException();
                 }
+
+                return httpConfig;
             }
+
             throw new ConfigurationInvalidException();
         }
         catch (Exception e)
@@ -219,7 +224,7 @@ public class TraefikHelper
             throw;
         }
     }
-    
+
     /// <summary>
     /// Validates the config.
     /// </summary>
@@ -229,19 +234,36 @@ public class TraefikHelper
     {
         try
         {
-            var httpConfig = GetHttpObjectFromConfig();
+            var routerNames = GetRouters();
+            var serviceNames = GetServices();
+            var middlewares = GetMiddlewares();
+            var entrypoints = GetEntrypoints();
 
-            foreach (var router in httpConfig.Routers)
+            foreach (var router in routerNames.Select(GetRouter))
             {
-                var serviceName = router.Value.Service;
-
-                if (!httpConfig.Services.ContainsKey(serviceName) && !serviceName.Contains('@'))
+                if (router.EntryPoints == null || router.Rule == null || router.Service == null)
                 {
-                    throw new ConfigurationInvalidException("Config is not valid. Router " + router.Key +
-                                                            " has no service");
+                    throw new ConfigurationInvalidException("Router is missing required fields");
+                }
+
+                if (router.EntryPoints.Any(entryPoint => !entrypoints.Contains(entryPoint)))
+                {
+                    throw new ConfigurationInvalidException("Router is using a non-existing entrypoint");
+                }
+
+                if (router.Middlewares != null &&
+                    router.Middlewares.Any(middleware => !middlewares.Contains(middleware)))
+                {
+                    throw new ConfigurationInvalidException("Router is using a non-existing middleware");
+                }
+
+                if (!serviceNames.Contains(router.Service) &&
+                    !router.Service.Contains('@')) // If the service contains '@' it is a Traefik service.
+                {
+                    throw new ConfigurationInvalidException("Router is using a non-existing service");
                 }
             }
-            
+
             _logger.Info("Config is valid");
             return true;
         }
@@ -256,26 +278,32 @@ public class TraefikHelper
     /// Returns a IEnumerable of all routers keys in the config.
     /// </summary>
     /// <returns></returns>
-    public IEnumerable<string> GetRouters()
+    public List<string> GetRouters()
     {
         var httpConfig = GetHttpObjectFromConfig();
-        
+
         IEnumerable<string> routers = from router in httpConfig.Routers select router.Key;
 
-        return routers;
+        var list = routers.ToList();
+        _logger.Debug($"Got routers ({string.Join(",", list)})");
+
+        return list;
     }
 
     /// <summary>
     /// Returns a IEnumerable of all services keys in the config.
     /// </summary>
     /// <returns></returns>
-    public IEnumerable<string> GetServices()
+    public List<string> GetServices()
     {
         var httpConfig = GetHttpObjectFromConfig();
-        
+
         var services = from service in httpConfig.Services select service.Key;
 
-        return services;
+        var enumerable = services.ToList();
+        _logger.Debug($"Got services ({string.Join(",", enumerable)})");
+
+        return enumerable;
     }
 
     /// <summary>
@@ -293,9 +321,9 @@ public class TraefikHelper
             {
                 throw new RouterNotFoundException();
             }
-            
+
             _config.http.routers = httpConfig.Routers;
-            
+
             _logger.Info(routerName + " router deleted");
 
             return true;
@@ -322,9 +350,9 @@ public class TraefikHelper
             {
                 throw new ServiceNotFoundException();
             }
-            
+
             _config.http.services = httpConfig.Services;
-            
+
             _logger.Info(serviceName + " service deleted");
 
             return true;
@@ -341,25 +369,12 @@ public class TraefikHelper
     /// </summary>
     /// <param name="routerName"></param>
     /// <returns></returns>
-    public Router? GetRouter(string routerName)
+    public Router GetRouter(string routerName)
     {
-        try
-        {
-            var httpConfig = GetHttpObjectFromConfig();
-            var success = httpConfig.Routers.TryGetValue(routerName, out var router);
-        
-            if (!success)
-            {
-                throw new RouterNotFoundException();
-            }
-        
-            return router;
-        }
-        catch (Exception e)
-        {
-            _logger.Error(e, "Error getting router (" + routerName + ")");
-            return null;
-        }
+        var httpConfig = GetHttpObjectFromConfig();
+        httpConfig.Routers.TryGetValue(routerName, out var router);
+
+        return router ?? throw new RouterNotFoundException();
     }
 
     /// <summary>
@@ -367,25 +382,12 @@ public class TraefikHelper
     /// </summary>
     /// <param name="serviceName"></param>
     /// <returns></returns>
-    public Service? GetService(string serviceName)
+    public Service GetService(string serviceName)
     {
-        try
-        {
-            var httpConfig = GetHttpObjectFromConfig();
-            var success = httpConfig.Services.TryGetValue(serviceName, out var service);
-        
-            if (!success)
-            {
-                throw new ServiceNotFoundException();
-            }
-        
-            return service;
-        }
-        catch (Exception e)
-        {
-            _logger.Error(e, "Error getting service (" + serviceName + ")");
-            return null;
-        }
+        var httpConfig = GetHttpObjectFromConfig();
+        httpConfig.Services.TryGetValue(serviceName, out var service);
+
+        return service ?? throw new ServiceNotFoundException();
     }
 
     /// <summary>
@@ -400,22 +402,23 @@ public class TraefikHelper
         {
             var httpConfig = GetHttpObjectFromConfig();
             var removed = httpConfig.Routers.Remove(routerName);
-                
+
             if (!removed)
             {
                 throw new RouterNotFoundException();
             }
+
             var success = httpConfig.Routers.TryAdd(routerName, router);
-            
+
             if (!success)
             {
                 throw new CouldNotAddException("Could not add router");
             }
-            
+
             _config.http.routers = httpConfig.Routers;
-            
+
             _logger.Info("Router updated. (" + routerName + ")");
-            
+
             return true;
         }
         catch (Exception e)
@@ -437,19 +440,19 @@ public class TraefikHelper
         {
             var httpConfig = GetHttpObjectFromConfig();
             var removed = httpConfig.Services.Remove(serviceName);
-            
+
             if (!removed)
             {
                 throw new ServiceNotFoundException();
             }
-            
+
             var success = httpConfig.Services.TryAdd(serviceName, service);
 
             if (!success)
             {
                 throw new CouldNotAddException("Could not add service");
             }
-            
+
             _config.http.services = httpConfig.Services;
 
             return true;
@@ -465,44 +468,44 @@ public class TraefikHelper
     /// Returns a list of all middlewares keys in the config.
     /// </summary>
     /// <returns>A list of middlewares in the config</returns>
-    public List<string> GetMiddlewares()
+    public HashSet<string> GetMiddlewares()
     {
-        var middlewares = new List<string>();
+        var middlewaresSet = new HashSet<string>();
+        var routers = GetRouters();
 
-        foreach (var http in _config.http)
+        foreach (var routerName in routers)
         {
-            if (http.Key != "middlewares") continue;
+            var router = GetRouter(routerName);
 
-            foreach (var middleware in _config.http.middlewares)
-            { 
-                middlewares.Add(middleware.Key);
+            if (router.Middlewares == null) continue;
+            foreach (var middleware in router.Middlewares)
+            {
+                middlewaresSet.Add(middleware);
             }
         }
-        return middlewares;
+
+        return middlewaresSet;
     }
 
     /// <summary>
     /// Returns a list of all used entrypoints keys in the config.
     /// </summary>
     /// <returns>A list of all used entrypoints keys in the config.</returns>
-    public List<string> GetEntrypoints()
+    public HashSet<string> GetEntrypoints()
     {
-        var entrypoints = new List<string>();
+        var entrypoints = new HashSet<string>();
         var routers = GetRouters();
-        
+
         foreach (var routerName in routers)
         {
             var router = GetRouter(routerName);
 
             foreach (var entryPoint in router.EntryPoints)
             {
-                if (!entrypoints.Contains(entryPoint))
-                {
-                    entrypoints.Add(entryPoint);
-                }
+                entrypoints.Add(entryPoint);
             }
         }
-        
+
         return entrypoints;
     }
 }

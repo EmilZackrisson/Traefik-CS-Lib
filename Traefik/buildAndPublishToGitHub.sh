@@ -15,4 +15,5 @@ git push --tags
 # Build and publish the new version
 dotnet build -c Release
 dotnet pack -c Release
-dotnet nuget push -s "github" --skip-duplicate ./bin/Release/Traefik.*.nupkg
+dotnet nuget push ./bin/Release/Traefik.*.nupkg --skip-duplicate --api-key "$NUGET_APIKEY" --source https://api.nuget.org/v3/index.json
+#dotnet nuget push -s "github" --skip-duplicate ./bin/Release/Traefik.*.nupkg

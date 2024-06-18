@@ -25,3 +25,26 @@ jobs:
       run: dotnet add package NUnit.ConsoleRunner --version 3.16.3
     - name: Test
       run: dotnet test --no-build --verbosity normal
+
+# This workflow will build a NuGet package and publish it to Nuget
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 8.0.x
+    - name: Build with dotnet
+      run: dotnet build --configuration Release
+    - name: Test with dotnet
+      run: dotnet test --no-build --verbosity normal
+    - name: Pack with dotnet
+      run: dotnet pack --no-build --configuration Release
+    - name: Push to NuGet
+      uses: nuget/nuget-push-action@v1
+      with:
+        nuget-api-key: ${{ secrets.NUGET_API_KEY }}
+        nuget-version: ${{ github.ref }}
+        source: https://api.nuget.org/v3/index.json
+        package: '**/*.nupkg'
